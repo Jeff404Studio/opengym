@@ -1,0 +1,32 @@
+---
+description: Fork OpenGym — Ollama local AI, Railway app, VPS Ollama via Cloudflare Tunnel
+alwaysApply: true
+---
+
+# OpenGym local AI (fork Jeff404Studio)
+
+## Goal
+- Self-hosted / Railway-hosted fork of OpenGym.
+- Add an optional local AI provider via **Ollama** (Qwen on the VPS).
+- App on **Railway**; Ollama on **VPS** reached only through **Cloudflare Tunnel** (never public `:11434`).
+- Default local model: `qwen3:1.7b` (VPS has ~8 Go RAM; do not default to 4B/8B).
+
+## Architecture constraints
+- AI provider must be interchangeable: `ollama`, existing Claude/Codex paths, and later others can coexist.
+- AI must never be required for core workout tracking — if Ollama is slow or down, the app keeps working.
+- Never expose Ollama or private data stores to the public internet.
+- Never write secrets into code or versioned files (`.env`, tokens, tunnel credentials).
+- Do not change DB/data migrations without explicitly calling that out.
+- Preserve existing conventions, style, tools, architecture, and tests.
+- Before any change: analyze the files involved and explain the plan.
+- After each change: run the project's available tests, linter, and build.
+- Never remove an existing feature without explicit user approval.
+
+## Coach / AI safety
+- Coach replies must be in **French**.
+- No medical diagnosis, no dangerous recommendations, no guaranteed results.
+
+## Hybrid deploy notes
+- Prefer env vars: `AI_PROVIDER` / coach provider selection, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`.
+- Railway talks to Ollama via the Cloudflare Tunnel URL + auth, not via LAN/Docker DNS alone.
+- Do not add a second public reverse proxy for Ollama on the VPS.
