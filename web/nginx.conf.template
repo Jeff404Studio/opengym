@@ -1,14 +1,20 @@
-# openGym — standalone web server: serves the static app AND proxies /api to the backend,
-# so the whole app lives on ONE origin (required for WebAuthn / passkeys).
-# API_HOST defaults to api:3000 (Docker Compose). On Railway set API_HOST=api.railway.internal:3000
+# openGym — static app + /api proxy (one origin for WebAuthn).
+# API_HOST defaults to api:3000 (Compose). On Railway: api.railway.internal:3000
+# Variable + resolver so DNS is re-resolved after API redeploys (avoids stale upstream/504).
+resolver ${NAMESERVER} ipv6=on valid=10s;
+resolver_timeout 5s;
+
 server {
     listen 80;
     root /usr/share/nginx/html;
     index index.html;
 
     location /api/ {
-        proxy_pass http://${API_HOST};
+        set $api_upstream "${API_HOST}";
+        proxy_pass http://$api_upstream;
         proxy_http_version 1.1;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 60s;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
