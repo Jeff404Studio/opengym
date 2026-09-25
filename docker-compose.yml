@@ -45,6 +45,10 @@ services:
     build:
       context: .
       dockerfile: web/Dockerfile
+      # Prefer locally fetched media (./media) over the CDN default in the Dockerfile.
+      args:
+        VITE_IMG_BASE: img/
+        VITE_GIF_BASE: gif/
     restart: unless-stopped
     depends_on:
       media:

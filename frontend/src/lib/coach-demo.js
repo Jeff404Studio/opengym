@@ -15,7 +15,7 @@
 import { EXIDX, EXDB } from './exercises.js'
 import { modeOf } from './history.js'
 import { planHash } from './coach.js'
-import { t } from './i18n.js'
+import { t, nameFor } from './i18n.js'
 
 const DELAY = 2200      // long enough to see "the Coach is thinking…", short enough to forgive
 
@@ -44,7 +44,7 @@ function buildReview(S) {
   const changes = []
   if (swapTo) changes.push({
     id: 'd1', type: 'swap-exercise', target: { routineId: routine.id, exId: first.id },
-    before: EXIDX[first.id]?.n || first.id, after: { id: swapTo.id, name: swapTo.n },
+    before: EXIDX[first.id] ? nameFor(EXIDX[first.id]) : first.id, after: { id: swapTo.id, name: nameFor(swapTo) },
     why: t('Every top set on this one came in at RPE 9.5 or above for three sessions and the weight has not moved. Swapping the movement for four weeks usually breaks that stall faster than grinding the same one.')
   })
   if (second) changes.push({

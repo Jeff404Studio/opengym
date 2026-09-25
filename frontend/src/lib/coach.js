@@ -14,7 +14,7 @@ import { modeOf, cleanupSg } from './history.js'
 import { uid } from './format.js'
 import { mergePlan } from './plan-share.js'
 import { POLICIES } from './progression.js'
-import { t } from './i18n.js'
+import { t, nameFor } from './i18n.js'
 
 // Bumping this re-prompts everyone: it means what we share, or who we share it with, changed.
 export const CONSENT_VERSION = 1
@@ -378,7 +378,10 @@ export function recordDismissal(s, proposal) {
 
 /* ============================ display helpers ============================ */
 
-export const exName = id => EXIDX[id]?.n || t('Unknown exercise')
+export const exName = id => {
+  const ex = EXIDX[id]
+  return ex ? nameFor(ex) : t('Unknown exercise')
+}
 
 /** Human label for a change, used on the review screen and in the log. */
 export function changeTitle(c) {
