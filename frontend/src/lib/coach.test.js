@@ -308,7 +308,7 @@ describe('the log', () => {
 
 describe('created plans', () => {
   const bundle = {
-    opengym_plan: 1, name: 'Coach plan', summary: 'three days',
+    ferrum_plan: 1, name: 'Coach plan', summary: 'three days',
     week: { 1: 'x1', 3: 'x2' },
     routines: [
       { id: 'x1', name: 'A', emoji: '💪', why: 'why A', ex: [{ id: '0001', sets: 3, reps: 10, mode: 'reps', why: 'why ex' }] },

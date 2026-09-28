@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Docs — openGym</title>
-<meta name="description" content="How to install openGym on Android, use it on iPhone, self-host it with Docker, import your training history, and keep backups.">
+<title>Docs — Ferrum</title>
+<meta name="description" content="How to install Ferrum on Android, use it on iPhone, self-host it with Docker, import your training history, and keep backups.">
 <meta name="theme-color" content="#0c0e12">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <link rel="icon" type="image/png" sizes="180x180" href="icon-180.png">
@@ -16,7 +16,7 @@
 <nav><div class="wrap nav-in">
   <a class="brand" href="/">
     <img src="icon-180.png" alt="" width="26" height="26" style="border-radius:6px">
-    openGym
+    Ferrum
   </a>
   <div class="nav-links">
     <a href="/#features" class="hide-s">Features</a>
@@ -24,16 +24,16 @@
     <a href="/#demo" class="hide-s">Demo</a>
     <a href="docs.html">Docs</a>
     <a href="about.html" class="hide-s">About</a>
-    <a href="https://github.com/DuarteSantos8/openGym" rel="noopener"><span data-gh="stars">GitHub</span></a>
+    
     <a class="cta" href="/#download">Download</a>
   </div>
 </div></nav>
 
 <main class="wrap prose">
   <h1>Docs</h1>
-  <p class="lead">Everything you need to get openGym running — on a phone, or on your own
+  <p class="lead">Everything you need to get Ferrum running — on a phone, or on your own
      server. The deeper, maintainer-level docs live
-     <a href="https://github.com/DuarteSantos8/openGym/tree/main/docs" rel="noopener">in the repository</a>.</p>
+     .</p>
 
   <div class="toc">
     <a href="#android">Android</a>
@@ -51,9 +51,9 @@
     <li>Your browser will ask whether it may install apps — allow it. This is standard for
         any app installed outside the Play Store (called <i>sideloading</i>), and you can
         revoke the permission right after.</li>
-    <li>Open the downloaded <code>openGym.apk</code>, confirm, done. No account, no setup.</li>
+    <li>Open the downloaded <code>Ferrum.apk</code>, confirm, done. No account, no setup.</li>
   </ol>
-  <div class="note">openGym is deliberately <b>not</b> on the Play Store — no store account
+  <div class="note">Ferrum is deliberately <b>not</b> on the Play Store — no store account
     between you and an open-source app. The APK is signed; updates install over the old
     version and keep your data.</div>
   <p>Everything is stored on the phone itself. The only things fetched from the internet are
@@ -63,14 +63,14 @@
   <p>Apple does not allow installing apps outside the App Store, so there is no iOS download —
      that's a platform rule, not a choice we made. What works instead:</p>
   <ul>
-    <li><b>Self-host + home screen (recommended):</b> open your own openGym instance in
+    <li><b>Self-host + home screen (recommended):</b> open your own Ferrum instance in
         Safari → <b>Share</b> → <b>Add to Home Screen</b>. You get a full-screen app with its
         own icon, passkey sign-in and sync — no expiry, no fees.</li>
     <li><b>Build it onto your own iPhone:</b> with a Mac and Xcode, the native app runs on
         your device with a free Apple ID (Apple expires the signature after 7 days; re-run
         from Xcode to renew). See
-        <a href="https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md" rel="noopener">docs/MOBILE.md</a>.</li>
-    <li><b>Just looking?</b> The <a href="https://duartesantos8.github.io/openGym/" rel="noopener">live demo</a>
+        .</li>
+    <li><b>Just looking?</b> The <a href="https://genefty.com/" rel="noopener">live demo</a>
         runs in any browser with example data.</li>
   </ul>
 
@@ -78,8 +78,8 @@
   <p>The self-hosted flavor adds passkey profiles, sync across devices, and (optionally) an
      admin dashboard. You need <a href="https://docs.docker.com/get-docker/" rel="noopener">Docker</a>
      with Compose:</p>
-  <pre><code>git clone https://github.com/DuarteSantos8/openGym
-cd openGym
+  <pre><code># Contact Ferrum for deployment — https://genefty.com
+cd Ferrum
 cp .env.example .env
 docker compose pull    # prebuilt images (amd64 + arm64) — skip to build from source
 docker compose up -d</code></pre>
@@ -88,7 +88,7 @@ docker compose up -d</code></pre>
   <div class="note">Want it reachable from your phone with passkeys? You'll need an HTTPS
     domain — a two-line change in <code>.env</code>. The full guide, including reverse-proxy
     examples and the invite-only/admin options, is in
-    <a href="https://github.com/DuarteSantos8/openGym/blob/main/docs/SELF_HOSTING.md" rel="noopener">docs/SELF_HOSTING.md</a>.</div>
+    .</div>
 
   <h2 id="import">Import your training history</h2>
   <p>Coming from another tracker? <b>Settings → Data → Import from another app</b> reads:</p>
@@ -109,7 +109,7 @@ docker compose up -d</code></pre>
      weights, settings — into one file. On the mobile app it goes out through the share sheet
      (Files, AirDrop, mail…); in the browser it downloads. <b>Import backup</b> restores it
      anywhere: another phone, your self-hosted instance, or a fresh install. That file is the
-     whole point of openGym — your training log as a file <i>you</i> own.</p>
+     whole point of Ferrum — your training log as a file <i>you</i> own.</p>
 
   <h2 id="build">Build it yourself</h2>
   <p>Everything on this page is built from the public repo:</p>
@@ -118,14 +118,14 @@ docker compose up -d</code></pre>
         inside the container — no local Node needed.</li>
     <li><b>Android APK / iOS app:</b> the Capacitor projects live in <code>frontend/android</code>
         and <code>frontend/ios</code> — build, signing and distribution notes are in
-        <a href="https://github.com/DuarteSantos8/openGym/blob/main/docs/MOBILE.md" rel="noopener">docs/MOBILE.md</a>.</li>
+        .</li>
   </ul>
 
   <h2 id="faq">FAQ</h2>
   <h3>Is it really free?</h3>
-  <p>Yes — free as in cost <i>and</i> as in freedom (AGPL-3.0). No pro tier, no locked
+  <p>Yes — free as in cost <i>and</i> as in freedom (managed by Genefty). No pro tier, no locked
      features, no ads, and the license keeps every fork open source too.</p>
-  <h3>What data does openGym collect?</h3>
+  <h3>What data does Ferrum collect?</h3>
   <p>None. There is no telemetry, no analytics, no crash reporting. The mobile app's only
      network traffic is fetching exercise media from a CDN; a self-hosted instance talks only
      to your own server.</p>
@@ -143,12 +143,12 @@ docker compose up -d</code></pre>
 </main>
 
 <footer><div class="wrap foot">
-  <span>openGym · AGPL-3.0 · © 2026 <a href="https://duarte-santos.ch" rel="noopener">Duarte Santos</a></span>
+  <span>Ferrum · managed by <a href="https://genefty.com" rel="noopener">Ferrum</a></span>
   <div class="links">
     <a href="docs.html">Docs</a>
     <a href="about.html" class="hide-s">About</a>
-    <a href="https://github.com/DuarteSantos8/openGym" rel="noopener">GitHub</a>
-    <a href="https://duartesantos8.github.io/openGym/" rel="noopener">Live demo</a>
+    
+    <a href="https://genefty.com/" rel="noopener">Live demo</a>
   </div>
 </div></footer>
 

@@ -1,7 +1,7 @@
 {
-  "name": "openGym",
-  "short_name": "openGym",
-  "description": "Personal gym & body weight tracker",
+  "name": "Ferrum",
+  "short_name": "Ferrum",
+  "description": "Personal gym & body weight tracker — managed by Genefty",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

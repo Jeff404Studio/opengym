@@ -100,7 +100,7 @@ function buildPlan(S, intake) {
     planHash: planHash(S),
     summary: t('A two-day rotation across three sessions a week, built around the equipment you listed. Compounds first, one pull for every press, and enough overlap between the days that nothing goes two weeks without being trained.'),
     bundle: {
-      opengym_plan: 1, name: t('Coach plan'),
+      ferrum_plan: 1, name: t('Coach plan'),
       summary: t('A two-day rotation across three sessions a week, built around the equipment you listed. Compounds first, one pull for every press, and enough overlap between the days that nothing goes two weeks without being trained.'),
       basedOn: (S.workouts || []).length ? t('Based on the training already in this demo profile.') : t('No training history yet — starting conservatively.'),
       week, routines, customEx: []

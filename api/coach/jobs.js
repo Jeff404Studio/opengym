@@ -20,15 +20,21 @@ import * as cfgStore from './config.js';
 import { adapterFor } from './adapters/index.js';
 import * as payloadLib from './payload.js';
 import { extractJSON, validatePlan, validateReview, contractOK } from './validate.js';
+import { coachCircuitAllow, coachCircuitFailure, coachCircuitSuccess, coachCircuitStatus } from './health.js';
+import { log } from '../lib/log.js';
+import { readState as storeReadState } from '../lib/store.js';
 
 const DATA = process.env.DATA_DIR || '/data';
 const COACH_DIR = path.join(DATA, 'coach');
+const QUEUE_FILE = path.join(COACH_DIR, 'queue.json');
+const DEAD_FILE = path.join(COACH_DIR, 'dead-letter.json');
 const PROMPTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'prompts');
 
-export const TIMEOUT_MS = 5 * 60000;
+export const TIMEOUT_MS = Math.max(30000, +(process.env.COACH_TIMEOUT_MS || 5 * 60000) || 5 * 60000);
 const MAX_CONCURRENT = 2;          // these are minutes-scale jobs on often-single-core boxes
 const PENDING_DAYS = 14;           // FR-33
 const HISTORY_MAX = 20;
+const MAX_RETRIES = Math.max(0, +(process.env.COACH_JOB_RETRIES || 1) || 1);
 
 /* ---------- per-user store ---------- */
 
@@ -57,6 +63,9 @@ export function clearUser(uid) {
 }
 
 export function readState(uid) {
+  const fromStore = storeReadState(uid);
+  if (fromStore) return fromStore;
+  // Test helpers still write legacy state-*.json files; keep reading them as fallback.
   try { return JSON.parse(fs.readFileSync(path.join(DATA, 'state-' + safe(uid) + '.json'), 'utf8')); }
   catch { return null; }
 }
@@ -147,26 +156,80 @@ export function enqueue(uid, opts) {
     note: opts.note || null,
     refine: opts.refine || null,
     state: 'queued',
-    startedAt: Date.now()
+    startedAt: Date.now(),
+    attempts: 0
   };
   inflight.add(uid);
   patchUser(uid, { current: { id: job.id, kind: job.kind, state: 'queued', startedAt: job.startedAt } });
   queue.push(job);
+  persistQueue();
   pump();
   return { id: job.id };
+}
+
+function readJsonSafe(file, fallback) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; }
+}
+function persistQueue() {
+  try {
+    fs.mkdirSync(COACH_DIR, { recursive: true, mode: 0o700 });
+    const tmp = QUEUE_FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(queue.map(j => ({
+      id: j.id, uid: j.uid, kind: j.kind, trigger: j.trigger, intake: j.intake, note: j.note,
+      refine: j.refine, state: j.state, startedAt: j.startedAt, attempts: j.attempts || 0
+    }))), { mode: 0o600 });
+    fs.renameSync(tmp, QUEUE_FILE);
+  } catch (e) { log.warn('coach_queue_persist_failed', { error: String(e.message || e) }); }
+}
+function pushDeadLetter(job, result) {
+  try {
+    fs.mkdirSync(COACH_DIR, { recursive: true, mode: 0o700 });
+    const dead = readJsonSafe(DEAD_FILE, []);
+    dead.push({
+      id: job.id, uid: job.uid, kind: job.kind, at: Date.now(),
+      errorClass: result.errorClass || 'failed', detail: result.detail || null, attempts: job.attempts || 0
+    });
+    const tmp = DEAD_FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(dead.slice(-100)), { mode: 0o600 });
+    fs.renameSync(tmp, DEAD_FILE);
+  } catch (e) { log.warn('coach_dead_letter_failed', { error: String(e.message || e) }); }
 }
 
 function pump() {
   while (running < MAX_CONCURRENT && queue.length) {
     const job = queue.shift();
+    persistQueue();
     running++;
     execute(job)
-      .catch(e => { console.error('coach job crashed', job.id, e); finish(job, { outcome: 'failed', errorClass: 'internal' }); })
-      .finally(() => { running--; inflight.delete(job.uid); pump(); });
+      .catch(e => {
+        log.error('coach_job_crashed', { id: job.id, error: String(e?.message || e) });
+        finish(job, { outcome: 'failed', errorClass: 'internal' });
+      })
+      .finally(() => {
+        running--;
+        if (!job._requeued) inflight.delete(job.uid);
+        persistQueue();
+        pump();
+      });
   }
 }
 
 function finish(job, result) {
+  const retryable = result.outcome === 'failed' && ['timeout', 'provider', 'missing'].includes(result.errorClass);
+  if (retryable && (job.attempts || 0) < MAX_RETRIES) {
+    job.attempts = (job.attempts || 0) + 1;
+    job.state = 'queued';
+    job.startedAt = Date.now();
+    job._requeued = true;
+    log.warn('coach_job_retry', { id: job.id, attempts: job.attempts, errorClass: result.errorClass });
+    queue.push(job);
+    patchUser(job.uid, { current: { id: job.id, kind: job.kind, state: 'queued', startedAt: job.startedAt } });
+    persistQueue();
+    return;
+  }
+  job._requeued = false;
+  if (result.outcome === 'failed') pushDeadLetter(job, result);
+
   const rec = readUser(job.uid);
   const history = [...(rec.history || []), {
     id: job.id, kind: job.kind, trigger: job.trigger, outcome: result.outcome,
@@ -183,8 +246,9 @@ function finish(job, result) {
     outcome: result.outcome, errorClass: result.errorClass || null,
     ms: Date.now() - job.startedAt, detail: result.detail || null
   });
+  log.info('coach_job_finished', { id: job.id, uid: job.uid, outcome: result.outcome, errorClass: result.errorClass || null });
   if (result.outcome === 'ready' && onProposal) {
-    try { onProposal(job.uid, result.pending, job); } catch (e) { console.error('coach notify failed', e); }
+    try { onProposal(job.uid, result.pending, job); } catch (e) { log.error('coach_notify_failed', { error: String(e?.message || e) }); }
   }
 }
 
@@ -223,6 +287,12 @@ async function execute(job) {
   const cfg = cfgStore.load();
   const adapter = adapterFor(cfg.provider);
   if (!adapter) return finish(job, { outcome: 'failed', errorClass: 'off' });
+
+  if (!coachCircuitAllow(cfg.provider)) {
+    const st = coachCircuitStatus(cfg.provider);
+    log.warn('coach_circuit_open', { provider: cfg.provider, lastError: st.lastError });
+    return finish(job, { outcome: 'failed', errorClass: 'provider', detail: 'Coach provider temporarily unavailable' });
+  }
 
   const pendingCreate = job.refine ? readUser(job.uid).pending : null;
   const payload = payloadLib.build(S, job.uid, {
@@ -272,13 +342,22 @@ async function invoke(adapter, cfg, payload, jobDir, env, job, repair) {
   const prompt = buildPrompt(job.kind, payload, repair);
   const r = await adapter.invoke({ cfg, prompt, jobDir, env, model: cfg.model || null, timeoutMs: TIMEOUT_MS });
 
-  if (r.timedOut) return { ok: false, errorClass: 'timeout' };
-  if (r.spawnError) return { ok: false, errorClass: 'missing', detail: r.stderr?.slice(0, 300) };
+  if (r.timedOut) {
+    coachCircuitFailure(cfg.provider, 'timeout');
+    return { ok: false, errorClass: 'timeout' };
+  }
+  if (r.spawnError) {
+    coachCircuitFailure(cfg.provider, r.stderr);
+    return { ok: false, errorClass: 'missing', detail: r.stderr?.slice(0, 300) };
+  }
   if (r.code !== 0) {
     const err = (r.stderr || r.text || '').toLowerCase();
     const authish = /auth|unauthor|api key|credential|token|401|403|login/.test(err);
+    if (!authish) coachCircuitFailure(cfg.provider, r.stderr || r.text);
     return { ok: false, errorClass: authish ? 'auth' : 'provider', detail: (r.stderr || r.text || '').slice(0, 300) };
   }
+
+  coachCircuitSuccess(cfg.provider);
 
   const parsed = extractJSON(r.text);
   if (parsed.error) return { ok: false, repairable: !repair, errors: [parsed.error], raw: r.text, errorClass: 'unusable' };
@@ -375,6 +454,7 @@ export function recoverOnBoot() {
   try {
     for (const f of fs.readdirSync(COACH_DIR)) {
       if (!f.endsWith('.json')) continue;
+      if (f === 'queue.json' || f === 'dead-letter.json' || f === 'coach.json') continue;
       const uid = f.replace(/\.json$/, '');
       const rec = readUser(uid);
       if (!rec.current) continue;
@@ -385,6 +465,25 @@ export function recoverOnBoot() {
       n++;
     }
   } catch { /* no coach dir yet */ }
-  if (n) console.log(`coach: cleared ${n} job(s) interrupted by restart`);
+  // Rehydrate durable queue left from a crash (queued, not running).
+  try {
+    const saved = readJsonSafe(QUEUE_FILE, []);
+    for (const j of saved) {
+      if (!j?.uid || !j?.id || inflight.has(j.uid)) continue;
+      inflight.add(j.uid);
+      queue.push({ ...j, state: 'queued', attempts: j.attempts || 0 });
+      patchUser(j.uid, { current: { id: j.id, kind: j.kind, state: 'queued', startedAt: Date.now() } });
+    }
+    if (saved.length) {
+      log.info('coach_queue_restored', { count: saved.length });
+      persistQueue();
+      pump();
+    }
+  } catch (e) { log.warn('coach_queue_restore_failed', { error: String(e?.message || e) }); }
+  if (n) log.warn('coach_jobs_interrupted', { count: n });
   return n;
+}
+
+export function deadLetterList() {
+  return readJsonSafe(DEAD_FILE, []);
 }

@@ -18,6 +18,10 @@ export function tempData() {
 
 export function writeState(dir, uid, S) {
   fs.writeFileSync(path.join(dir, 'state-' + uid + '.json'), JSON.stringify(S));
+  // Also seed SQLite when the store is already initialised for this DATA_DIR.
+  import('../lib/store.js').then(store => {
+    try { store.writeState(uid, S); } catch { /* store not ready */ }
+  }).catch(() => {});
 }
 
 /** A profile that has consented and has some history — the usual starting point. */

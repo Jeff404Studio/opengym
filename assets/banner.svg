@@ -1,26 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="660" height="190" viewBox="0 0 660 190" role="img" aria-label="openGym — self-hosted gym & body-weight tracker">
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="220" viewBox="0 0 880 220" role="img" aria-label="Ferrum — gym tracker by Genefty">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#12151b"/>
       <stop offset="1" stop-color="#0c0e12"/>
     </linearGradient>
   </defs>
-  <rect width="660" height="190" rx="22" fill="url(#bg)"/>
-  <rect x="1.5" y="1.5" width="657" height="187" rx="20.5" fill="none" stroke="#2b3140" stroke-width="3"/>
+  <rect width="880" height="220" rx="24" fill="url(#bg)"/>
+  <rect x="1.5" y="1.5" width="877" height="217" rx="22.5" fill="none" stroke="#2b3140" stroke-width="3"/>
 
-  <!-- dumbbell mark (centered to the text block) -->
-  <g transform="translate(122,96) scale(0.8)" fill="#a3e635">
-    <rect x="-72" y="-10" width="144" height="20" rx="7"/>
-    <rect x="-80" y="-36" width="20" height="72" rx="7"/>
-    <rect x="-104" y="-25" width="17" height="50" rx="7"/>
-    <rect x="60"  y="-36" width="20" height="72" rx="7"/>
-    <rect x="87"  y="-25" width="17" height="50" rx="7"/>
+  <g transform="translate(56,38)">
+    <rect width="144" height="144" rx="32" fill="#0c0e12" stroke="#2b3140" stroke-width="3"/>
+    <circle cx="72" cy="72" r="48" fill="none" stroke="#a3e635" stroke-width="10"/>
+    <circle cx="72" cy="72" r="30" fill="none" stroke="#a3e635" stroke-width="6"/>
+    <circle cx="72" cy="72" r="12" fill="#a3e635"/>
   </g>
 
-  <!-- wordmark + tagline -->
-  <text x="224" y="86" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="62" font-weight="800" letter-spacing="-2">
-    <tspan fill="#eef1f6">open</tspan><tspan fill="#a3e635">Gym</tspan>
-  </text>
-  <text x="226" y="120" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="20.5" font-weight="600" fill="#8b94a7">Self-hosted gym &amp; body-weight tracker</text>
-  <text x="226" y="146" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="14" font-weight="500" fill="#5c6475">passkey login  ·  own your data  ·  docker  ·  AGPL</text>
+  <text x="232" y="108" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="64" font-weight="800" letter-spacing="-1.5" fill="#eef1f6">Ferrum</text>
+  <text x="234" y="148" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="22" font-weight="600" fill="#8b94a7">Gym &amp; body-weight tracker</text>
+  <text x="234" y="176" font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" font-size="15" font-weight="500" fill="#5c6475">by Genefty · genefty.com</text>
 </svg>

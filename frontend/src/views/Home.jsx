@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore.js'
 import { effectiveRoutine, effectiveRoutineId, streakWeeks, lastBW, setsDoneActive } from '../lib/history.js'
 import { fmtNum, fmtDate, todayISO, isoOf, weekKey, DAYS } from '../lib/format.js'
 import { t, dateLocale } from '../lib/i18n.js'
-import { bwSheet, goalSheet, dayOverrideSheet, calendarSheet, startFlow, loadStarterPlan, bwDeltaColor } from '../sheets.jsx'
+import { bwSheet, goalSheet, dayOverrideSheet, calendarSheet, startFlow, loadStarterPlan, bwDeltaColor, onboardingSheet } from '../sheets.jsx'
 import LineChart from '../components/LineChart.jsx'
 import Icon from '../components/Icon.jsx'
 import { Button } from '../components/ui.jsx'
@@ -13,6 +13,7 @@ import { coachAvailable, hasConsent } from '../lib/coach.js'
 import { useCoachStatus } from '../lib/coach-api.js'
 import { DEMO } from '../lib/demo.js'
 import { MOBILE } from '../lib/mobile.js'
+import { APP_NAME } from '../lib/brand.js'
 
 // A job in flight or a proposal waiting is the only reason the Coach interrupts Home. When it
 // has nothing to say it renders nothing at all — and it only polls while Home is on screen.
@@ -68,6 +69,12 @@ export default function Home() {
   const coachOn = coachAvailable(config, user, { demo: DEMO, mobile: MOBILE })
 
   useEffect(() => { refreshConfig() }, [])
+  useEffect(() => {
+    if (!S.onboarding?.done && !(S.routines || []).length && !(S.workouts || []).length) {
+      const tmr = setTimeout(() => onboardingSheet(), 400)
+      return () => clearTimeout(tmr)
+    }
+  }, [])
 
   const today = new Date()
   const routine = effectiveRoutine(S, todayISO())
@@ -99,7 +106,7 @@ export default function Home() {
 
   return <div className="narrow">
     <div className="hdr">
-      <div><h1>{user ? t('Hi {0}', user.name) : 'Genefty'}</h1><div className="sub">{today.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</div></div>
+      <div><h1>{user ? t('Hi {0}', user.name) : APP_NAME}</h1><div className="sub">{today.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</div></div>
       <div className="row" style={{ gap: 4 }}>
         {coachOn && <button className="iconbtn" onClick={() => nav('/coach')} aria-label={t('Coach')}><Icon name="sparkles" /></button>}
         <button className="iconbtn" onClick={() => nav('/settings')} aria-label={t('Settings')}><Icon name="gear" /></button>

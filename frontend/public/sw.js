@@ -1,6 +1,6 @@
-/* openGym service worker — runtime caching (works with Vite's hashed asset names).
+/* Ferrum service worker — runtime caching (works with Vite's hashed asset names).
    Media (img/gif) cache-first; everything else network-first with offline fallback. */
-const CACHE = 'opengym-rt-v1'
+const CACHE = 'ferrum-rt-v1'
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', e => {
@@ -10,11 +10,11 @@ self.addEventListener('activate', e => {
 })
 self.addEventListener('push', e => {
   const data = e.data ? e.data.json() : {}
-  e.waitUntil(self.registration.showNotification(data.title || 'openGym', {
+  e.waitUntil(self.registration.showNotification(data.title || 'Ferrum', {
     body: data.body || '',
     icon: 'icon-512.png',
     badge: 'icon-180.png',
-    tag: data.tag || 'opengym',
+    tag: data.tag || 'ferrum',
     renotify: true
   }))
 })

@@ -2,11 +2,14 @@ import { create } from 'zustand'
 import { api } from '../lib/api.js'
 import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
+import { migrateState, SCHEMA_VERSION } from '../lib/migrate.js'
+import { mergeStates } from '../lib/merge-state.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { MOBILE, nativeLoad, nativeSave, syncReminder } from '../lib/mobile.js'
 
 const KEY = 'gym_state_v1'
 export const DEF = {
+  schemaVersion: SCHEMA_VERSION,
   unit: 'kg', restSec: 90, sound: true, keepAwake: true, lang: 'en',
   theme: 'dark', accent: 'lime', body: 'male', targetW: null,
   bodyweight: [], routines: [], week: {}, dayPlan: {},
@@ -19,14 +22,15 @@ export const DEF = {
   // AI Coach (issue: AI enablement). null until the profile opts in — a null namespace is the
   // same app it was before the feature existed, which is what Epic F asks for. Shape and
   // bounds live in lib/coach.js.
-  coach: null
+  coach: null,
+  onboarding: { done: false, goal: null, days: null, equipment: null }
 }
 const clone = o => JSON.parse(JSON.stringify(o))
 
 function loadState() {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return Object.assign(clone(DEF), JSON.parse(raw))
+    if (raw) return Object.assign(clone(DEF), migrateState(JSON.parse(raw)))
   } catch (e) { /* ignore */ }
   return clone(DEF)
 }
@@ -45,10 +49,11 @@ export const useStore = create((set, get) => {
   }
 
   const persist = (S, push = true) => {
-    S._ts = Date.now()
-    registerCustom(S.customEx)
-    localStorage.setItem(KEY, JSON.stringify(S))
-    set({ S })
+    const migrated = migrateState(S)
+    migrated._ts = Date.now()
+    registerCustom(migrated.customEx)
+    localStorage.setItem(KEY, JSON.stringify(migrated))
+    set({ S: migrated })
     if (MOBILE) nativePersist()
     if (push && get().user) {
       clearTimeout(pushTm)
@@ -72,6 +77,12 @@ export const useStore = create((set, get) => {
       pushTm = null
       get().pushState()
     }
+  })
+
+  window.addEventListener('online', () => {
+    import('../lib/offline.js').then(({ flushOfflineQueue }) => {
+      flushOfflineQueue(() => get().pushState())
+    })
   })
 
   // Everything a sign-out leaves behind on this device, whichever way it was triggered.
@@ -112,20 +123,39 @@ export const useStore = create((set, get) => {
     async pushState() {
       if (!get().user) return
       clearTimeout(pushTm)
-      try { await api('/api/data', { method: 'PUT', body: JSON.stringify({ state: get().S }) }); localStorage.removeItem('gym_dirty') }
-      catch (e) { localStorage.setItem('gym_dirty', '1') }
+      try {
+        await api('/api/data', { method: 'PUT', body: JSON.stringify({ state: get().S }) })
+        localStorage.removeItem('gym_dirty')
+        const { clearOfflineQueue } = await import('../lib/offline.js')
+        clearOfflineQueue()
+      } catch (e) {
+        localStorage.setItem('gym_dirty', '1')
+        const { enqueueOffline } = await import('../lib/offline.js')
+        enqueueOffline({ type: 'push' })
+      }
     },
     async pullState() {
       try {
         const { state } = await api('/api/data')
         const S = get().S
         const dirty = localStorage.getItem('gym_dirty') === '1'
-        if (state && (!hasData(S) || ((state._ts || 0) >= (S._ts || 0) && !dirty))) {
-          const active = S.active
-          const next = Object.assign(clone(DEF), state)
-          if (active) next.active = active
-          persist(next, false)
-        } else if (hasData(S)) { await get().pushState() }
+        if (!state) {
+          if (hasData(S)) await get().pushState()
+          return
+        }
+        const active = S.active
+        const remote = migrateState(state)
+        let next
+        if (!hasData(S)) {
+          next = Object.assign(clone(DEF), remote)
+        } else {
+          // Entity merge: keep workouts/routines/weight from both sides; scalars prefer
+          // the newer root `_ts`, or local when dirty (offline edits).
+          next = mergeStates(S, remote, { preferLocal: dirty })
+        }
+        if (active) next.active = active
+        persist(next, false)
+        if (dirty) await get().pushState()
       } catch (e) { /* offline — keep local */ }
     },
 
@@ -161,7 +191,7 @@ export const useStore = create((set, get) => {
         const saved = await nativeLoad()
         const S = get().S
         if (saved && (!hasData(S) || (saved._ts || 0) >= (S._ts || 0))) {
-          persist(Object.assign(clone(DEF), saved), false)
+          persist(Object.assign(clone(DEF), migrateState(saved)), false)
         } else if (hasData(S)) {
           nativeSave(S)   // first run after an update from a file-less version: seed the mirror
         }

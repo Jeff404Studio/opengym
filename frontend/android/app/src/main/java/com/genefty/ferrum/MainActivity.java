@@ -1,4 +1,4 @@
-package ch.duartesantos.opengym;
+package com.genefty.ferrum;
 
 import com.getcapacitor.BridgeActivity;
 

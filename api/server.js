@@ -1,5 +1,5 @@
-/* opengym-api — passkey (WebAuthn) auth + per-user state storage for openGym
-   No framework, JSON-file storage, signed session cookies.               */
+/* ferrum-api — passkey (WebAuthn) auth + per-user state storage for Ferrum
+   SQLite persistence, signed session cookies.                            */
 import http from 'node:http';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -13,12 +13,15 @@ import * as coachConfig from './coach/config.js';
 import * as coachJobs from './coach/jobs.js';
 import { coachRoutes } from './coach/routes.js';
 import { startCadence } from './coach/cadence.js';
+import { coachCircuitStatus } from './coach/health.js';
+import { log } from './lib/log.js';
+import { db, saveDb, readState, writeState, userCount } from './lib/store.js';
 
 const PORT = +(process.env.PORT || 3000);
 const DATA = process.env.DATA_DIR || '/data';
 const RP_ID = process.env.RP_ID || 'localhost';
 const ORIGIN = process.env.ORIGIN || 'http://localhost:8080';
-const RP_NAME = process.env.RP_NAME || 'openGym';
+const RP_NAME = process.env.RP_NAME || 'Ferrum';
 // Admin dashboard (issue): admins are matched by uid; INVITE_ONLY gates new signups behind a
 // code the admin generates. Both default off so a fresh self-hosted instance stays open.
 const ADMIN_UIDS = (process.env.ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -34,31 +37,21 @@ const SECURE = /^https:/i.test(ORIGIN) ? ' Secure;' : '';
 
 fs.mkdirSync(DATA, { recursive: true });
 // 0700 is what stops the unprivileged user that Coach jobs run as from reading any of this —
-// state files, db.json, the session secret, the provider credential. The Agent SDK process gets
+// state files, db, the session secret, the provider credential. The Agent SDK process gets
 // its job payload in a temp directory and nothing else. Best-effort: a bind-mounted host directory
 // may refuse the chmod, and that is not a reason to refuse to boot.
 try { fs.chmodSync(DATA, 0o700); } catch { /* host filesystem says no — carry on */ }
 
-/* ---------- secret + db ---------- */
+/* ---------- secret ---------- */
 const secretFile = path.join(DATA, 'secret');
 if (!fs.existsSync(secretFile)) fs.writeFileSync(secretFile, crypto.randomBytes(32).toString('hex'), { mode: 0o600 });
 const SECRET = fs.readFileSync(secretFile, 'utf8').trim();
 
-const dbFile = path.join(DATA, 'db.json');
-let db = { users: [], creds: [], subs: [], invites: [] };
-try { db = JSON.parse(fs.readFileSync(dbFile, 'utf8')); } catch {}
-db.subs = db.subs || [];
-db.invites = db.invites || [];
 const isAdmin = user => !!user && (user.admin === true || ADMIN_UIDS.includes(user.id));
-function saveDb() { atomicWrite(dbFile, JSON.stringify(db, null, 2)); }
 function atomicWrite(file, content) {
   const tmp = file + '.tmp';
   fs.writeFileSync(tmp, content);
   fs.renameSync(tmp, file);
-}
-const stateFile = uid => path.join(DATA, 'state-' + uid.replace(/[^a-zA-Z0-9_-]/g, '') + '.json');
-function readState(uid) {
-  try { return JSON.parse(fs.readFileSync(stateFile(uid), 'utf8')); } catch { return null; }
 }
 
 /* ---------- push notifications (Web Push / VAPID) ---------- */
@@ -265,7 +258,22 @@ setInterval(() => { for (const [k, v] of presence) if (Date.now() - v.updatedAt 
 
 /* ---------- routes ---------- */
 const routes = {
-  'GET /api/health': async (req, res) => json(res, 200, { ok: true, users: db.users.length }),
+  'GET /api/health': async (req, res) => {
+    const cfg = coachConfig.load();
+    const circuit = coachCircuitStatus(cfg.provider || 'default');
+    json(res, 200, {
+      ok: true,
+      service: 'ferrum-api',
+      users: userCount(),
+      coach: {
+        enabled: coachConfig.isEnabled(),
+        connected: coachConfig.isConnected(),
+        provider: cfg.provider || null,
+        circuitOpen: circuit.open,
+        circuitFailures: circuit.failures
+      }
+    });
+  },
 
   // Public config the login screen needs before anyone is signed in. `coach` is absent unless
   // the instance has both switched the Coach on and successfully connected a provider — the
@@ -393,10 +401,7 @@ const routes = {
   'GET /api/data': async (req, res) => {
     const user = readSession(req);
     if (!user) return json(res, 401, { error: 'not signed in' });
-    try {
-      const state = JSON.parse(fs.readFileSync(stateFile(user.id), 'utf8'));
-      json(res, 200, { state });
-    } catch { json(res, 200, { state: null }); }
+    json(res, 200, { state: readState(user.id) });
   },
 
   'PUT /api/data': async (req, res) => {
@@ -405,7 +410,7 @@ const routes = {
     const body = await readBody(req);
     if (!body.state || typeof body.state !== 'object') return json(res, 400, { error: 'state required' });
     delete body.state.active;              // in-progress workouts stay device-local
-    atomicWrite(stateFile(user.id), JSON.stringify(body.state));
+    writeState(user.id, body.state);
     json(res, 200, { ok: true, ts: body.state._ts || null });
   },
 
@@ -435,7 +440,7 @@ const routes = {
   'POST /api/push/test': async (req, res) => {
     const user = readSession(req);
     if (!user) return json(res, 401, { error: 'not signed in' });
-    await sendPush(user.id, { title: 'openGym', body: 'Test notification ✅ — this is what alerts look like.', tag: 'test' });
+    await sendPush(user.id, { title: 'Ferrum', body: 'Test notification ✅ — this is what alerts look like.', tag: 'test' });
     json(res, 200, { ok: true });
   },
 
@@ -593,4 +598,4 @@ http.createServer(async (req, res) => {
     if (!res.headersSent) json(res, 500, { error: 'server error' });
   }
 // Bind dual-stack so Railway private networking (IPv4 + IPv6) can reach the API from web.
-}).listen(PORT, '::', () => console.log(`gym-api on :${PORT} (rpID=${RP_ID}, origin=${ORIGIN})`));
+}).listen(PORT, '::', () => log.info('api_listen', { port: PORT, rpID: RP_ID, origin: ORIGIN }));

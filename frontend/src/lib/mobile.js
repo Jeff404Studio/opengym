@@ -13,7 +13,7 @@ import { t } from './i18n.js'
 
 export const MOBILE = import.meta.env.VITE_MOBILE === '1'
 
-const FILE = 'opengym-state.json'
+const FILE = 'ferrum-state.json'
 
 export async function nativeLoad() {
   try {

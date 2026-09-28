@@ -19,7 +19,7 @@ function modelName(env, model) {
 }
 
 const SYSTEM = [
-  'You are the openGym Coach.',
+  'You are the Ferrum Coach.',
   'Answer only the supplied task and return exactly the requested JSON.',
   'Reply in French for any human-readable coach text fields.',
   'No medical diagnosis, no dangerous recommendations, no guaranteed results.',

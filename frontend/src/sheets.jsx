@@ -7,7 +7,7 @@ import { lastEntryFor, bestWeightFor, buildSets, effectiveRoutineId, workoutVolu
 import { beep, vibrate } from './lib/sound.js'
 import { t, instrFor, nameFor, getLang, INSTR_LANGS } from './lib/i18n.js'
 import { nav } from './lib/nav.js'
-import { starterRoutines } from './lib/starter.js'
+import { starterRoutines, TEMPLATES, applyTemplate } from './lib/starter.js'
 import Media, { Thumb } from './components/Media.jsx'
 import Stepper from './components/Stepper.jsx'
 import Icon from './components/Icon.jsx'
@@ -42,14 +42,111 @@ export function confirmSheet(opts) {
   ui().openSheet(close => <ConfirmDialog {...opts} close={close} />, { kind: 'center' })
 }
 
-/* ============================ starter plan ============================ */
+/* ============================ starter / templates ============================ */
 export function loadStarterPlan() {
-  const [push, pull, legs] = starterRoutines()
-  update(st => {
-    st.routines.push(push, pull, legs)
-    st.week[1] = push.id; st.week[3] = pull.id; st.week[5] = legs.id
-  })
-  toast(t('Starter plan loaded — Mon Push · Wed Pull · Fri Legs'))
+  pickTemplateSheet()
+}
+
+export function pickTemplateSheet() {
+  ui().openSheet(close => <>
+    <h3>{t('Ferrum programmes')}</h3>
+    <div className="muted small" style={{ marginBottom: 12, lineHeight: 1.45 }}>
+      {t('Pick a template — you can edit every exercise afterwards.')}
+    </div>
+    {TEMPLATES.map(tpl => (
+      <div key={tpl.id} className="item" onClick={() => {
+        update(st => { applyTemplate(st, tpl.id) })
+        close()
+        toast(t(tpl.toastKey))
+      }}>
+        <span className="lrow-i" style={{ background: 'var(--acc)' }}><Icon name="sparkles" /></span>
+        <div className="grow">
+          <div className="tt">{t(tpl.nameKey)}</div>
+          <div className="sub">{t(tpl.blurbKey)}</div>
+        </div>
+        <Icon name="chevron" />
+      </div>
+    ))}
+  </>)
+}
+
+/** First-run onboarding: goal → days → equipment → template. */
+export function onboardingSheet() {
+  ui().openSheet(close => <OnboardingFlow close={close} />, { kind: 'sheet' })
+}
+
+function OnboardingFlow({ close }) {
+  const [step, setStep] = useState(0)
+  const [goal, setGoal] = useState('strength')
+  const [days, setDays] = useState(3)
+  const [equipment, setEquipment] = useState('gym')
+  const goals = [
+    ['strength', 'Build strength'],
+    ['muscle', 'Build muscle'],
+    ['recomp', 'Recomp / general fitness'],
+    ['return', 'Coming back after a break']
+  ]
+  const finish = (templateId) => {
+    update(st => {
+      st.onboarding = { done: true, goal, days, equipment }
+      applyTemplate(st, templateId)
+    })
+    close()
+    toast(t('Welcome to Ferrum — your plan is ready'))
+  }
+  return <>
+    <h3>{t('Welcome to Ferrum')}</h3>
+    <div className="dim small" style={{ marginBottom: 12 }}>{t('Step {0} of {1}', step + 1, 4)}</div>
+    {step === 0 && <>
+      <div className="muted small" style={{ marginBottom: 10 }}>{t('What’s your main goal?')}</div>
+      {goals.map(([id, label]) => (
+        <div key={id} className="item" onClick={() => setGoal(id)}>
+          <div className="grow tt">{t(label)}</div>
+          {goal === id && <Icon name="check" className="accent" />}
+        </div>
+      ))}
+      <div style={{ height: 12 }} />
+      <Button variant="primary" onClick={() => setStep(1)}>{t('Continue')}</Button>
+    </>}
+    {step === 1 && <>
+      <div className="muted small" style={{ marginBottom: 10 }}>{t('How many days per week can you train?')}</div>
+      <Segmented value={String(days)} onChange={v => setDays(+v)} options={['2', '3', '4'].map(d => ({ value: d, label: d }))} />
+      <div style={{ height: 12 }} />
+      <Button variant="primary" onClick={() => setStep(2)}>{t('Continue')}</Button>
+    </>}
+    {step === 2 && <>
+      <div className="muted small" style={{ marginBottom: 10 }}>{t('What equipment do you have?')}</div>
+      {[
+        ['gym', 'Full gym'],
+        ['home', 'Home / dumbbells'],
+        ['bodyweight', 'Bodyweight only']
+      ].map(([id, label]) => (
+        <div key={id} className="item" onClick={() => setEquipment(id)}>
+          <div className="grow tt">{t(label)}</div>
+          {equipment === id && <Icon name="check" className="accent" />}
+        </div>
+      ))}
+      <div style={{ height: 12 }} />
+      <Button variant="primary" onClick={() => setStep(3)}>{t('Continue')}</Button>
+    </>}
+    {step === 3 && <>
+      <div className="muted small" style={{ marginBottom: 10 }}>{t('Choose a starting programme')}</div>
+      {TEMPLATES.filter(tpl => goal === 'return' ? tpl.id === 'return' : true).map(tpl => (
+        <div key={tpl.id} className="item" onClick={() => finish(tpl.id)}>
+          <span className="lrow-i" style={{ background: 'var(--acc)' }}><Icon name="sparkles" /></span>
+          <div className="grow">
+            <div className="tt">{t(tpl.nameKey)}</div>
+            <div className="sub">{t(tpl.blurbKey)}</div>
+          </div>
+        </div>
+      ))}
+      <div style={{ height: 8 }} />
+      <Button variant="ghost" className="dim" onClick={() => {
+        update(st => { st.onboarding = { done: true, goal, days, equipment } })
+        close()
+      }}>{t('Skip for now')}</Button>
+    </>}
+  </>
 }
 
 /* ============================ weight picker (shared: body weight + goal) ============================ */
@@ -582,7 +679,7 @@ function PlanTools({ close }) {
   const exportFile = async () => {
     const bundle = buildPlanBundle(st, user?.name ? t('{0}’s plan', user.name) : '')
     const json = JSON.stringify(bundle, null, 2)
-    const name = 'opengym-plan-' + todayISO() + '.json'
+    const name = 'ferrum-plan-' + todayISO() + '.json'
     if (MOBILE) { try { await shareExport(json, name) } catch (e) { /* dismissed */ } close(); return }
     const blob = new Blob([json], { type: 'application/json' })
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); URL.revokeObjectURL(a.href)
@@ -602,7 +699,7 @@ function PlanTools({ close }) {
     <h3>{t('Share your plan')}</h3>
     <div className="muted small" style={{ marginBottom: 16 }}>{t('Send your routines to a friend, or put your week on paper.')}</div>
     <Button variant="primary" icon="upload" onClick={exportFile} disabled={!hasRoutines}>{t('Export plan file')}</Button>
-    <div className="dim small" style={{ margin: '7px 2px 0', lineHeight: 1.4 }}>{t('A small file a friend imports into their own openGym — routines only, none of your workouts or weigh-ins.')}</div>
+    <div className="dim small" style={{ margin: '7px 2px 0', lineHeight: 1.4 }}>{t('A small file a friend imports into their own Ferrum — routines only, none of your workouts or weigh-ins.')}</div>
     {!MOBILE && <>
       <div style={{ height: 12 }} />
       <Button variant="tinted" icon="download" onClick={() => { close(); printPlan(st, user?.name || '') }} disabled={!hasRoutines}>{t('Print / Save as PDF')}</Button>

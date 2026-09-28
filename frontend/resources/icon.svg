@@ -1,13 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
-  <!-- App-icon source == the PWA icon (public/icon-512.png), geometry traced 1:1 so the
-       native app, the home-screen PWA and the website favicon all show the same icon.
-       Generate platform icons + splash via `npx @capacitor/assets generate` — docs/MOBILE.md. -->
-  <rect width="512" height="512" fill="#0c0e12"/>
-  <g fill="#a3e635">
-    <rect x="80" y="242" width="352" height="28"/>
-    <rect x="80" y="199" width="36" height="114"/>
-    <rect x="131" y="169" width="47" height="174"/>
-    <rect x="334" y="169" width="47" height="174"/>
-    <rect x="396" y="199" width="36" height="114"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512" role="img" aria-label="Ferrum">
+  <!-- Olympic plate mark — iron / strength -->
+  <rect width="512" height="512" rx="112" fill="#0c0e12"/>
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#a3e635" stroke-width="28"/>
+  <circle cx="256" cy="256" r="108" fill="none" stroke="#a3e635" stroke-width="18"/>
+  <circle cx="256" cy="256" r="42" fill="#a3e635"/>
+  <!-- plate notches -->
+  <path d="M256 74v36M256 402v36M74 256h36M402 256h36" stroke="#0c0e12" stroke-width="22" stroke-linecap="round"/>
 </svg>

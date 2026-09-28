@@ -44,7 +44,7 @@ test('a creation job produces a plan bundle in the app\'s own share format', asy
   jobs.enqueue(uid, { kind: 'create', intake: { goal: 'muscle', daysPerWeek: 3, equipment: ['dumbbell'] } });
   const s = await settle(uid);
   assert.equal(lastOutcome(uid).outcome, 'ready');
-  assert.equal(s.pending.bundle.opengym_plan, 1);
+  assert.equal(s.pending.bundle.ferrum_plan, 1);
   assert.ok(s.pending.bundle.routines.length > 0);
 });
 

@@ -15,7 +15,7 @@ Design a complete plan from `coachProfile` (their intake answers) and, if presen
 ```
 {
   "coach_contract": 1,
-  "opengym_plan": 1,
+  "ferrum_plan": 1,
   "name": "<short plan name>",
   "summary": "<2-4 sentences: the shape of the plan and why it fits what they asked for>",
   "basedOn": "<what you used — e.g. 'your last 12 weeks' or 'no history yet'>",

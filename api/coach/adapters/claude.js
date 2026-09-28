@@ -11,7 +11,7 @@ import { unprivilegedIds } from './spawn.js';
 const SDK_VERSION = 'Claude Agent SDK 0.3.220';
 const OUTPUT_CAP = 4 * 1024 * 1024;
 const SYSTEM_PROMPT = [
-  'You are the openGym Coach.',
+  'You are the Ferrum Coach.',
   'Answer only the supplied task and return exactly the requested JSON.',
   'You have no tools, filesystem access, external services, or persistent memory.'
 ].join(' ');
@@ -52,7 +52,7 @@ export default {
           cwd: jobDir,
           // `env` replaces rather than extends the SDK subprocess environment. config.jobEnv()
           // creates it from scratch, so this adds no server secrets to the model process.
-          env: { ...env, CLAUDE_AGENT_SDK_CLIENT_APP: 'opengym-coach/1.2.3' },
+          env: { ...env, CLAUDE_AGENT_SDK_CLIENT_APP: 'ferrum-coach/1.2.3' },
           model: model || undefined,
           maxTurns: 1,
           tools: [],
