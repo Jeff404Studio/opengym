@@ -8,6 +8,7 @@
  */
 import { run } from './spawn.js';
 import claude from './claude.js';
+import ollama from './ollama.js';
 import { CODEX_BIN } from './codex-cli.js';
 
 const CODEX_DISABLED_FEATURES = [
@@ -61,6 +62,6 @@ const fixture = {
   }
 };
 
-const ADAPTERS = { claude, codex, fixture };
+const ADAPTERS = { claude, codex, ollama, fixture };
 export const adapterFor = provider => ADAPTERS[provider] || null;
 export default ADAPTERS;

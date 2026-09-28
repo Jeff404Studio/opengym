@@ -91,9 +91,17 @@ export default function AdminCoach() {
       </div>
 
       {/* credential */}
-      {(meta.setupToken || meta.deviceLogin || meta.apiKey) && <>
+      {(meta.setupToken || meta.deviceLogin || meta.apiKey || meta.noCred) && <>
         <h4 className="sec">Credential</h4>
-        {d.auth?.state === 'connected' ? <>
+        {meta.noCred ? <>
+          <div className="small muted" style={{ marginBottom: 8 }}>
+            No API key. The server reaches Ollama via <code>OLLAMA_BASE_URL</code>
+            {d.auth?.state === 'not-required' ? ' (configured).' : ' — set it in the environment, then reload.'}
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <Button size="sm" icon="check" disabled={busy || d.auth?.state !== 'not-required'} onClick={test}>Test the Coach</Button>
+          </div>
+        </> : d.auth?.state === 'connected' ? <>
           <div className="small muted" style={{ marginBottom: 8 }}>
             Connected{d.auth.account ? ' as ' + d.auth.account : ''} via {credentialLabel(d.auth.type)} · {rel(d.auth.connectedAt)}
           </div>

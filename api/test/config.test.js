@@ -66,7 +66,7 @@ test('retired Gemini and Custom command configurations reset to unconfigured Cla
   });
   cfg.reset();
   const current = cfg.load();
-  assert.deepEqual(Object.keys(cfg.PROVIDERS).sort(), ['claude', 'codex', 'fixture']);
+  assert.deepEqual(Object.keys(cfg.PROVIDERS).sort(), ['claude', 'codex', 'fixture', 'ollama']);
   assert.equal(current.provider, 'claude');
   assert.equal(current.auth, null);
   assert.equal(Object.hasOwn(current, 'customCommand'), false);
@@ -102,6 +102,29 @@ test('legacy Claude credentials are disabled until replaced with a setup token',
   assert.equal(env.ANTHROPIC_API_KEY, undefined);
   assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, undefined);
   assert.throws(() => auth.setApiKey('sk-ant-key'), /setup token/);
+});
+
+test('Ollama needs OLLAMA_BASE_URL and passes it into the job env without a stored secret', () => {
+  const prevUrl = process.env.OLLAMA_BASE_URL;
+  const prevModel = process.env.OLLAMA_MODEL;
+  delete process.env.OLLAMA_BASE_URL;
+  delete process.env.OLLAMA_MODEL;
+  cfg.save({ enabled: true, provider: 'ollama', auth: null });
+  assert.equal(cfg.isConnected(), false);
+  assert.equal(auth.authStatus().state, 'disconnected');
+
+  process.env.OLLAMA_BASE_URL = 'https://ollama.example.test';
+  process.env.OLLAMA_MODEL = 'qwen3:1.7b';
+  assert.equal(cfg.isConnected(), true);
+  assert.equal(auth.authStatus().state, 'not-required');
+  const env = cfg.jobEnv('/tmp/jobdir');
+  assert.equal(env.OLLAMA_BASE_URL, 'https://ollama.example.test');
+  assert.equal(env.OLLAMA_MODEL, 'qwen3:1.7b');
+  assert.equal(env.ANTHROPIC_API_KEY, undefined);
+  assert.equal(env.OPENAI_API_KEY, undefined);
+
+  if (prevUrl === undefined) delete process.env.OLLAMA_BASE_URL; else process.env.OLLAMA_BASE_URL = prevUrl;
+  if (prevModel === undefined) delete process.env.OLLAMA_MODEL; else process.env.OLLAMA_MODEL = prevModel;
 });
 
 test('the instance job log records outcomes, never contents', () => {

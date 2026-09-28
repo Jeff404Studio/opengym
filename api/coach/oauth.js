@@ -176,6 +176,11 @@ export async function disconnect() {
 export function authStatus() {
   const cfg = load();
   if (cfg.provider === 'fixture') return { state: 'not-required' };
+  if (cfg.provider === 'ollama') {
+    return String(process.env.OLLAMA_BASE_URL || '').trim()
+      ? { state: 'not-required' }
+      : { state: 'disconnected' };
+  }
   if (cfg.provider === 'codex') {
     if (!hasCodexAuth()) return { state: 'disconnected' };
     let connectedAt = null;

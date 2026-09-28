@@ -107,7 +107,7 @@ export function coachRoutes({ json, readBody, readSession, requireAdmin }) {
         disabledByEnv: cfgStore.COACH_DISABLED,
         enabled: !!cfg.enabled,
         provider: cfg.provider,
-        providers: Object.entries(cfgStore.PROVIDERS).map(([id, p]) => ({ id, label: p.label, runtime: p.runtime, setupToken: !!p.setupToken, deviceLogin: !!p.deviceLogin, apiKey: !!p.apiKeyEnv })),
+        providers: Object.entries(cfgStore.PROVIDERS).map(([id, p]) => ({ id, label: p.label, runtime: p.runtime, setupToken: !!p.setupToken, deviceLogin: !!p.deviceLogin, apiKey: !!p.apiKeyEnv, noCred: !!p.noCred })),
         model: cfg.model,
         caps: cfg.caps,
         runtime: { ok: !!check.ok, version: check.version || null, error: check.error || null },

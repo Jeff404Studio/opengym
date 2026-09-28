@@ -30,6 +30,8 @@ export const COACH_DISABLED = /^(1|true|yes|on)$/i.test(process.env.COACH_DISABL
 export const PROVIDERS = {
   claude: { label: 'Claude Code', runtime: 'Claude Agent SDK', setupToken: true, apiKeyEnv: 'ANTHROPIC_API_KEY', oauthEnv: 'CLAUDE_CODE_OAUTH_TOKEN' },
   codex: { label: 'OpenAI Codex CLI', runtime: 'OpenAI Codex CLI', deviceLogin: true, apiKeyEnv: null, oauthEnv: null },
+  // Local / self-hosted LLM via Ollama HTTP. No API key — OLLAMA_BASE_URL (+ optional OLLAMA_MODEL).
+  ollama: { label: 'Ollama (local)', runtime: 'Ollama HTTP', noCred: true, apiKeyEnv: null, oauthEnv: null },
   // Test-only: drives the in-repo fixture CLI. Selectable so an instance can be exercised
   // end-to-end (and demoed) without any AI account at all.
   fixture: { label: 'Fixture (testing)', runtime: 'Fixture', apiKeyEnv: null, oauthEnv: null }
@@ -151,6 +153,8 @@ export function isConnected() {
   const cfg = load();
   if (!isEnabled()) return false;
   if (cfg.provider === 'fixture') return true;
+  // Ollama needs a reachable base URL in the environment — no stored secret.
+  if (cfg.provider === 'ollama') return !!String(process.env.OLLAMA_BASE_URL || '').trim();
   // Codex's ChatGPT credential remains in Codex's own auth.json cache, not coach.json.
   if (cfg.provider === 'codex') return hasCodexAuth();
   // Claude is intentionally setup-token only. Do not silently retain the old browser OAuth or
@@ -184,6 +188,11 @@ export function jobEnv(jobDir) {
     // This is the only persistent state a Codex job receives. The directory is a dedicated
     // bind mount owned by `coach`; /data and every OpenGym secret remain inaccessible.
     env.CODEX_HOME = ensureCodexHome();
+  }
+  if (cfg.provider === 'ollama') {
+    // Explicitly pass through — jobEnv is built from scratch, not filtered from process.env.
+    if (process.env.OLLAMA_BASE_URL) env.OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
+    if (process.env.OLLAMA_MODEL) env.OLLAMA_MODEL = process.env.OLLAMA_MODEL;
   }
   const auth = cfg.auth ? decrypt(cfg.auth.data) : null;
   if (auth && auth.token && (cfg.provider !== 'claude' || cfg.auth.type === 'cli-token')) {
