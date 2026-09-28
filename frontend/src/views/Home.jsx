@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore.js'
 import { effectiveRoutine, effectiveRoutineId, streakWeeks, lastBW, setsDoneActive } from '../lib/history.js'
@@ -39,14 +39,35 @@ function CoachCard({ nav }) {
   </div>
 }
 
+/** Always-visible entry when the instance offers the Coach — not only when a job is running. */
+function CoachEntry({ nav }) {
+  const S = useStore(s => s.S)
+  const consented = hasConsent(S)
+  return <div className="card tappable" style={{ cursor: 'pointer' }} onClick={() => nav('/coach')}>
+    <div className="today-row">
+      <div className="row" style={{ gap: 9, minWidth: 0 }}>
+        <span className="lrow-i" style={{ background: 'var(--acc)' }}><Icon name="sparkles" /></span>
+        <div style={{ minWidth: 0 }}>
+          <div className="lbl2">{t('Coach')}</div>
+          <div className="ttl">{consented ? t('Chat, reviews and plan design') : t('Meet the Coach')}</div>
+        </div>
+      </div>
+      <Icon name="chevronRight" className="chev" />
+    </div>
+  </div>
+}
+
 // Home = what to do now + a quick glance. Deep charts & history live in Stats.
 export default function Home() {
   const nav = useNavigate()
   const S = useStore(s => s.S)
   const user = useStore(s => s.user)
   const config = useStore(s => s.config)
+  const refreshConfig = useStore(s => s.refreshConfig)
   const [weekOffset, setWeekOffset] = useState(0)
   const coachOn = coachAvailable(config, user, { demo: DEMO, mobile: MOBILE })
+
+  useEffect(() => { refreshConfig() }, [])
 
   const today = new Date()
   const routine = effectiveRoutine(S, todayISO())
@@ -78,8 +99,11 @@ export default function Home() {
 
   return <div className="narrow">
     <div className="hdr">
-      <div><h1>{user ? t('Hi {0}', user.name) : 'openGym'}</h1><div className="sub">{today.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</div></div>
-      <button className="iconbtn" onClick={() => nav('/settings')} aria-label={t('Settings')}><Icon name="gear" /></button>
+      <div><h1>{user ? t('Hi {0}', user.name) : 'Genefty'}</h1><div className="sub">{today.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })}</div></div>
+      <div className="row" style={{ gap: 4 }}>
+        {coachOn && <button className="iconbtn" onClick={() => nav('/coach')} aria-label={t('Coach')}><Icon name="sparkles" /></button>}
+        <button className="iconbtn" onClick={() => nav('/settings')} aria-label={t('Settings')}><Icon name="gear" /></button>
+      </div>
     </div>
 
     <div className="card">
@@ -106,6 +130,7 @@ export default function Home() {
     </div>
 
     {coachOn && <CoachCard nav={nav} />}
+    {coachOn && <CoachEntry nav={nav} />}
 
     {!S.routines.length && !S.active && (
       <div className="card">

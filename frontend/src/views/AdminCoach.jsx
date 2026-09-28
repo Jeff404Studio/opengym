@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useUI } from '../store/useUI.js'
+import { useStore } from '../store/useStore.js'
 import { api } from '../lib/api.js'
 import Icon from '../components/Icon.jsx'
 import { Button, Switch, TextField } from '../components/ui.jsx'
@@ -23,6 +24,7 @@ const rel = ts => {
 export default function AdminCoach() {
   const toast = useUI(s => s.toast)
   const openSheet = useUI(s => s.openSheet)
+  const refreshConfig = useStore(s => s.refreshConfig)
   const [d, setD] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -31,16 +33,22 @@ export default function AdminCoach() {
 
   const patch = async body => {
     setBusy(true)
-    try { await api('/api/admin/coach/config', { method: 'POST', body: JSON.stringify(body) }); await load() }
-    catch (e) { toast(e.message) }
+    try {
+      await api('/api/admin/coach/config', { method: 'POST', body: JSON.stringify(body) })
+      await load()
+      await refreshConfig()
+    } catch (e) { toast(e.message) }
     setBusy(false)
   }
   const test = async () => {
     setBusy(true)
     try {
       const r = await api('/api/admin/coach/test', { method: 'POST', body: '{}' })
-      toast(r.ok ? 'Coach test passed ✅' : 'Test failed: ' + (r.error || 'unknown'))
+      toast(r.ok
+        ? 'Coach test passed — athletes open Coach from Home (sparkles) or Settings → Coach'
+        : 'Test failed: ' + (r.error || 'unknown'))
       await load()
+      await refreshConfig()
     } catch (e) { toast(e.message) }
     setBusy(false)
   }
@@ -242,7 +250,7 @@ function ChatGPTLoginSheet({ close, onDone, label }) {
   return <>
     <h3>Connect {label}</h3>
     <div className="muted small" style={{ lineHeight: 1.5, marginBottom: 12 }}>
-      This starts Codex&apos;s official ChatGPT device-code sign-in inside the private Coach runtime. On your iPad or another trusted browser, open the link and enter the one-time code it shows. No API key is used or stored by OpenGym.
+      This starts Codex&apos;s official ChatGPT device-code sign-in inside the private Coach runtime. On your iPad or another trusted browser, open the link and enter the one-time code it shows. No API key is used or stored by Genefty.
     </div>
     {!waiting && login?.state !== 'connected' && <Button variant="primary" disabled={busy} onClick={start}>Start device sign-in</Button>}
     {waiting && <div className="small muted" style={{ marginBottom: 8 }}>Waiting for ChatGPT sign-in…</div>}

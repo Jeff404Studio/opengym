@@ -64,7 +64,7 @@ export function readState(uid) {
 /* ---------- caps ---------- */
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
-function bumpDaily(uid) {
+export function bumpDaily(uid) {
   const rec = readUser(uid);
   const d = todayISO();
   const daily = rec.daily?.date === d ? { date: d, count: rec.daily.count + 1 } : { date: d, count: 1 };

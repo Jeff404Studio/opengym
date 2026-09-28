@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore, DEF } from '../store/useStore.js'
 import { useUI } from '../store/useUI.js'
@@ -7,11 +7,11 @@ import { fmtDate } from '../lib/format.js'
 import { DEMO } from '../lib/demo.js'
 import { MOBILE } from '../lib/mobile.js'
 import {
-  coachAvailable, hasConsent, CONSENT_VERSION, emptyCoach,
+  coachAvailable, hasConsent, CONSENT_VERSION, emptyCoach, CHAT_MAX,
   canRevert, revertLast, changeTitle, recordDismissal
 } from '../lib/coach.js'
 import {
-  useCoachStatus, requestReview, resolvePending, forgetCoach, disclosure, JOB_ERRORS
+  useCoachStatus, requestReview, resolvePending, forgetCoach, disclosure, askCoachChat, JOB_ERRORS
 } from '../lib/coach-api.js'
 import { confirmSheet } from '../sheets.jsx'
 import Icon from '../components/Icon.jsx'
@@ -38,15 +38,22 @@ export default function Coach() {
   const S = useStore(s => s.S)
   const user = useStore(s => s.user)
   const config = useStore(s => s.config)
+  const refreshConfig = useStore(s => s.refreshConfig)
   const update = useStore(s => s.update)
   const toast = useUI(s => s.toast)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const { job, pending, cap, refresh } = useCoachStatus(true)
 
+  useEffect(() => { refreshConfig() }, [])
+
   // Gating lives in one predicate; if the instance isn't offering the Coach this route simply
-  // isn't a place you can be.
-  useEffect(() => { if (!coachAvailable(config, user, { demo: DEMO, mobile: MOBILE })) nav('/home', { replace: true }) }, [config, user])
+  // isn't a place you can be. Wait until config has been fetched at least once (not null).
+  useEffect(() => {
+    if (config === null) return
+    if (!coachAvailable(config, user, { demo: DEMO, mobile: MOBILE })) nav('/home', { replace: true })
+  }, [config, user])
+  if (config === null) return null
   if (!coachAvailable(config, user, { demo: DEMO, mobile: MOBILE })) return null
 
   const consented = hasConsent(S)
@@ -88,10 +95,10 @@ export default function Coach() {
 
   return <div className="narrow">
     <div className="hdr">
-      <button className="iconbtn" onClick={() => nav('/plan')} aria-label={t('Back')}><Icon name="chevronLeft" /></button>
+      <button className="iconbtn" onClick={() => nav('/home')} aria-label={t('Back')}><Icon name="chevronLeft" /></button>
       <div style={{ flex: 1, marginLeft: 10 }}>
         <h1>{t('Coach')}</h1>
-        <div className="sub">{t('Plan design and reviews, from your own training')}</div>
+        <div className="sub">{t('Chat, plan design and reviews')}</div>
       </div>
     </div>
 
@@ -99,6 +106,8 @@ export default function Coach() {
       ? <ConsentCard onDone={() => refresh()} />
       : <>
         <StatusCard job={job} pending={pending} nav={nav} />
+
+        <ChatCard coach={coach} update={update} toast={toast} />
 
         {!job && !pending && <div className="card">
           <h2 style={{ margin: '0 0 6px' }}>{t('Ask for a review')}</h2>
@@ -195,6 +204,87 @@ function ConsentCard({ onDone }) {
       {t('An AI coach that can design your plan and adjust it from what you actually log. It runs on this server, it never changes anything without your say-so, and it is off until you turn it on.')}
     </div>
     <Button variant="primary" icon="sparkles" onClick={open}>{t('See what it would use')}</Button>
+  </div>
+}
+
+/* ---------------------------------- chat ---------------------------------- */
+
+function ChatCard({ coach, update, toast }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const bottom = useRef(null)
+  const messages = coach.chat?.messages || []
+
+  useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [messages.length, busy])
+
+  const send = async () => {
+    const msg = text.trim()
+    if (!msg || busy) return
+    setText('')
+    const history = messages.slice(-12).map(m => ({ role: m.role, text: m.text }))
+    update(s => {
+      const c = (s.coach = s.coach || emptyCoach())
+      c.chat = c.chat || { messages: [] }
+      c.chat.messages = [...(c.chat.messages || []), { role: 'user', text: msg, at: Date.now() }].slice(-CHAT_MAX)
+    })
+    setBusy(true)
+    try {
+      const out = await askCoachChat(msg, history)
+      update(s => {
+        const c = (s.coach = s.coach || emptyCoach())
+        c.chat = c.chat || { messages: [] }
+        c.chat.messages = [...(c.chat.messages || []), {
+          role: 'assistant', text: out.reply, at: Date.now(), escalate: !!out.escalate_to_review
+        }].slice(-CHAT_MAX)
+      })
+      if (out.escalate_to_review) toast(t('To change your plan, use Ask for a review below.'))
+    } catch (e) {
+      toast(t(JOB_ERRORS[e.code] || e.message || t('Could not ask the Coach')))
+    }
+    setBusy(false)
+  }
+
+  const clear = () => confirmSheet({
+    title: t('Clear chat?'),
+    message: t('Only this conversation is wiped. Your plan and Coach history stay.'),
+    confirmText: t('Clear'),
+    onConfirm: () => update(s => {
+      const c = (s.coach = s.coach || emptyCoach())
+      c.chat = { messages: [] }
+    })
+  })
+
+  return <div className="card">
+    <div className="row between" style={{ marginBottom: 8 }}>
+      <h2 style={{ margin: 0 }}>{t('Chat with the Coach')}</h2>
+      {!!messages.length && <button className="dim small" style={{ background: 'none', border: 0, cursor: 'pointer' }} onClick={clear}>{t('Clear')}</button>}
+    </div>
+    <div className="muted small" style={{ marginBottom: 10, lineHeight: 1.45 }}>
+      {t('Ask about your plan, form cues, or what to do next. Chat never changes your plan on its own.')}
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 280, overflowY: 'auto', marginBottom: 10 }}>
+      {!messages.length && !busy && (
+        <div className="dim small" style={{ padding: '8px 0' }}>{t('e.g. “Should I deload this week?” or “What replaces barbell rows if my back is tired?”')}</div>
+      )}
+      {messages.map((m, i) => (
+        <div key={i} style={{
+          alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+          maxWidth: '92%',
+          padding: '8px 11px',
+          borderRadius: 12,
+          background: m.role === 'user' ? 'color-mix(in srgb, var(--acc) 22%, transparent)' : 'var(--surface-3)',
+          fontSize: 14, lineHeight: 1.45, whiteSpace: 'pre-wrap'
+        }}>{m.text}</div>
+      ))}
+      {busy && <div className="muted small">{t('The Coach is thinking…')}</div>}
+      <div ref={bottom} />
+    </div>
+    <TextArea rows={2} value={text} maxLength={800} disabled={busy}
+      onChange={e => setText(e.target.value)}
+      placeholder={t('Message the Coach…')}
+      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} />
+    <div style={{ height: 10 }} />
+    <Button variant="primary" icon="sparkles" disabled={busy || !text.trim()} onClick={send}>{t('Send')}</Button>
   </div>
 }
 

@@ -196,6 +196,18 @@ export const useStore = create((set, get) => {
         if (e.status === 401) get().setUser(null)
       }
       set({ ready: true })
+    },
+
+    /** Re-fetch public instance config (Coach on/off). Call after admin enable, or when a
+     *  Settings/Home screen mounts — boot only loads it once, so enabling mid-session used
+     *  to leave every athlete entry point hidden until a full reload. */
+    async refreshConfig() {
+      if (DEMO || MOBILE) return get().config
+      try {
+        const config = await api('/api/config')
+        set({ config })
+        return config
+      } catch { return get().config }
     }
   }
 })

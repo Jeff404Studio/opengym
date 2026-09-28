@@ -7,6 +7,7 @@
 import * as cfgStore from './config.js';
 import * as oauth from './oauth.js';
 import * as jobs from './jobs.js';
+import * as chat from './chat.js';
 import { adapterFor } from './adapters/index.js';
 import { DATA_CATEGORIES } from './payload.js';
 
@@ -16,9 +17,13 @@ const USER_ERROR = {
   off: 'the Coach is not set up on this instance',
   busy: 'the Coach is already thinking about your training',
   cap: 'the Coach is resting — try again tomorrow',
-  consent: 'the Coach needs your go-ahead first'
+  consent: 'the Coach needs your go-ahead first',
+  empty: 'say something first',
+  timeout: 'the Coach took too long and gave up',
+  provider: 'the Coach couldn’t run — the instance owner needs to check its setup',
+  unusable: 'the Coach answered with something the app couldn’t use'
 };
-const HTTP_FOR = { off: 503, busy: 409, cap: 429, consent: 403 };
+const HTTP_FOR = { off: 503, busy: 409, cap: 429, consent: 403, empty: 400, timeout: 504, provider: 502, unusable: 502 };
 
 export function coachRoutes({ json, readBody, readSession, requireAdmin }) {
   /** Every user route starts the same way: signed in, feature on, feature reachable. */
@@ -83,6 +88,19 @@ export function coachRoutes({ json, readBody, readSession, requireAdmin }) {
         rejected: Array.isArray(body.rejected) ? body.rejected : [],
         dismissed: !!body.dismissed
       }));
+    },
+
+    // Short Q&A — does not mutate the plan. Consent + caps enforced server-side.
+    'POST /api/coach/chat': async (req, res) => {
+      const user = guard(req, res); if (!user) return;
+      const body = await readBody(req);
+      try {
+        const out = await chat.ask(user.id, {
+          message: body.message,
+          history: body.history
+        });
+        json(res, 200, out);
+      } catch (e) { failEnqueue(res, e); }
     },
 
     // Consent withdrawn, or the profile turned the Coach off: drop everything held server-side

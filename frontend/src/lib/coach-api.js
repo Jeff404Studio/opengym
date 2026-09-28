@@ -28,6 +28,9 @@ export const refinePlan = async text => DEMO ? (await demo()).demoRefine(S()) : 
 export const resolvePending = async body => DEMO ? (await demo()).demoResolve() : api('/api/coach/pending/resolve', { method: 'POST', body: JSON.stringify(body) })
 export const forgetCoach = async () => DEMO ? (await demo()).demoResolve() : api('/api/coach/forget', { method: 'POST', body: '{}' })
 export const disclosure = async () => DEMO ? (await demo()).demoDisclosure() : api('/api/coach/disclosure')
+export const askCoachChat = async (message, history) => DEMO
+  ? { reply: 'Demo Coach: ask me anything about your plan once you self-host.', escalate_to_review: false }
+  : api('/api/coach/chat', { method: 'POST', body: JSON.stringify({ message, history }) })
 
 /**
  * Live job/proposal state.
@@ -73,6 +76,7 @@ export const JOB_ERRORS = {
   busy: 'The Coach is already thinking about your training.',
   cap: 'The Coach is resting — try again tomorrow.',
   consent: 'The Coach needs your go-ahead first.',
+  empty: 'Say something first.',
   timeout: 'The Coach took too long and gave up.',
   auth: 'The Coach couldn’t sign in to its provider — the instance owner needs to check its setup.',
   missing: 'The Coach isn’t installed properly on this instance.',

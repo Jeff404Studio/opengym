@@ -24,10 +24,13 @@ export const CONSENT_VERSION = 1
 // ~75 KB; the namespace guard is the backstop for the case nobody predicted.
 export const SNAPSHOT_MAX = 3
 export const LOG_MAX = 50
+export const CHAT_MAX = 40
 const NAMESPACE_MAX = 256 * 1024
 
 export const emptyCoach = () => ({
-  consent: null, profile: null, cadence: 'off', lastReview: null, log: [], snapshots: []
+  consent: null, profile: null, cadence: 'off', lastReview: null, log: [], snapshots: [],
+  // Client-side chat transcript only — never applied to the plan. Capped so sync stays small.
+  chat: { messages: [] }
 })
 const coachOf = s => (s.coach = s.coach || emptyCoach())
 
@@ -204,9 +207,11 @@ export function appendLog(s, entry) {
  */
 function trim(s) {
   const c = coachOf(s)
+  if (c.chat?.messages?.length > CHAT_MAX) c.chat.messages = c.chat.messages.slice(-CHAT_MAX)
   let guard = 0
   while (JSON.stringify(c).length > NAMESPACE_MAX && guard++ < 60) {
-    if ((c.snapshots || []).length > 1) c.snapshots.shift()
+    if ((c.chat?.messages || []).length > 4) c.chat.messages.shift()
+    else if ((c.snapshots || []).length > 1) c.snapshots.shift()
     else if ((c.log || []).length > 1) c.log.shift()
     else break
   }

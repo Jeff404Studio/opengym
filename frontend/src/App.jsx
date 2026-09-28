@@ -50,6 +50,12 @@ function Shell() {
   useEffect(() => { document.documentElement.lang = S.lang || 'en' }, [langV, S.lang])
   // every tab/route change starts at the top of the page
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
+  // Refresh Coach availability when the tab becomes visible again (admin may have enabled it).
+  useEffect(() => {
+    const onVis = () => { if (document.visibilityState === 'visible') useStore.getState().refreshConfig?.() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
   // bound to the workout, not to the route — checking Stats mid-session keeps the screen on
   useWakeLock(!!S.active && S.keepAwake !== false)
 
