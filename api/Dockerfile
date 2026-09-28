@@ -21,6 +21,7 @@ RUN npm ci --omit=dev --include=optional \
  && ./node_modules/.bin/codex --version
 COPY server.js ./
 COPY coach/ ./coach/
+COPY lib/ ./lib/
 ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["node", "server.js"]
