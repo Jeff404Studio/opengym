@@ -12,6 +12,7 @@ import * as cfgStore from './config.js';
 import { adapterFor } from './adapters/index.js';
 import { extractJSON } from './validate.js';
 import { CoachError, readState, capState, bumpDaily } from './jobs.js';
+import { hasConsent } from './consent.js';
 
 const PROMPTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'prompts');
 // Keep below nginx proxy_read_timeout (180s) so the API can return a typed timeout, not a bare 504.
@@ -97,7 +98,7 @@ export async function ask(uid, { message, history } = {}) {
   if (!text) throw new CoachError('empty', 'empty message');
 
   const S = readState(uid);
-  if (!S?.coach?.consent?.agreedAt) throw new CoachError('consent', 'the Coach needs your go-ahead first');
+  if (!hasConsent(S)) throw new CoachError('consent', 'the Coach needs your go-ahead first');
 
   const caps = cfgStore.load().caps || {};
   const { used, limit } = capState(uid);

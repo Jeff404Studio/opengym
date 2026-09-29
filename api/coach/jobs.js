@@ -21,6 +21,7 @@ import { adapterFor } from './adapters/index.js';
 import * as payloadLib from './payload.js';
 import { extractJSON, validatePlan, validateReview, contractOK } from './validate.js';
 import { coachCircuitAllow, coachCircuitFailure, coachCircuitSuccess, coachCircuitStatus } from './health.js';
+import { hasConsent } from './consent.js';
 import { log } from '../lib/log.js';
 import { readState as storeReadState } from '../lib/store.js';
 
@@ -134,8 +135,8 @@ export function enqueue(uid, opts) {
 
   const S = readState(uid);
   // Consent is enforced here, server-side, not by the screen that collects it: a UI-only gate
-  // is not a gate (FR-08/13).
-  if (!S?.coach?.consent?.agreedAt) throw new CoachError('consent', 'the Coach needs your go-ahead first');
+  // is not a gate (FR-08/13). Version must match CONSENT_VERSION (bump invalidates old consent).
+  if (!hasConsent(S)) throw new CoachError('consent', 'the Coach needs your go-ahead first');
 
   const caps = cfgStore.load().caps || {};
   const { used, limit } = capState(uid);

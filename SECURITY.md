@@ -6,9 +6,9 @@ need — what the app protects you from and what it doesn't.
 
 ## Supported versions
 
-Only the **latest release**. Releases are semver tags (`v1.0.0` → `v1.2.3`, see
-[CHANGELOG.md](CHANGELOG.md)); there is no LTS or maintenance branch and older tags are never
-patched. A fix ships in the next release and in the `latest` images on ghcr.io.
+Only the **latest release**. Releases are semver tags (`v1.0.0` → `v1.2.3`); there is no LTS or
+maintenance branch and older tags are never patched. A fix ships in the next release and in the
+`latest` images on ghcr.io.
 
 Updating a self-hosted instance:
 
@@ -99,14 +99,14 @@ Read this before hosting openGym for anyone other than yourself.
 
 ### What it does not do
 
-- **Nothing in `./data` is encrypted.** It holds `db.json` (users, passkey public keys, push
-  subscriptions, invite codes), one `state-<uid>.json` per user with their complete workout
-  history and body-weight log, `secret`, and `vapid.json`. Anyone who can read that folder — you,
+- **Nothing in `./data` is encrypted.** It holds `ferrum.sqlite` (users, passkey public keys, push
+  subscriptions, invite codes, and each user's complete workout history and body-weight log),
+  `secret`, and `vapid.json`. Anyone who can read that folder — you,
   whoever holds the backups, whoever gets into the host — can read every user's data, and with
   `secret` can mint a valid session cookie for any account. **If you host openGym for other
   people, they are trusting you exactly as much as they'd trust any server operator.**
 - **Admins can read everything.** A user listed in `ADMIN_UIDS` (or flagged `admin: true` in
-  `db.json`) gets every user's full history and body weight, can disable accounts, and can create
+  the database) gets every user's full history and body weight, can disable accounts, and can create
   or revoke invite codes (`api/server.js:460-540`). Off by default — a fresh instance has no admin.
 - **Sessions can't be revoked one device at a time.** Revocation is per *account*, not per
   session: `POST /api/logout/all` kills all of them at once and there is no device list to pick

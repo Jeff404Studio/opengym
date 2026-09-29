@@ -156,14 +156,17 @@ const summarise = p => [
 
 function ConsentCard({ onDone }) {
   const update = useStore(s => s.update)
+  const pushState = useStore(s => s.pushState)
   const config = useStore(s => s.config)
   const toast = useUI(s => s.toast)
   const openSheet = useUI(s => s.openSheet)
   const [info, setInfo] = useState(null)
   useEffect(() => { disclosure().then(setInfo).catch(() => {}) }, [])
 
-  const agree = () => {
+  const agree = async () => {
     update(s => { s.coach = { ...(s.coach || emptyCoach()), consent: { agreedAt: new Date().toISOString(), version: CONSENT_VERSION } } })
+    // Flush immediately — Coach API reads consent from the server copy, not localStorage.
+    await pushState()
     toast(t('The Coach is on'))
     onDone()
   }

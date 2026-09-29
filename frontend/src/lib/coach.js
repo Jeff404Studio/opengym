@@ -17,6 +17,7 @@ import { POLICIES } from './progression.js'
 import { t, nameFor } from './i18n.js'
 
 // Bumping this re-prompts everyone: it means what we share, or who we share it with, changed.
+// Keep in lockstep with api/coach/consent.js CONSENT_VERSION.
 export const CONSENT_VERSION = 1
 
 // Bounds. The whole state has to stay inside the server's 5 MB body limit, and a Coach log

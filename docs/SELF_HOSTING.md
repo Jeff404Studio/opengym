@@ -72,7 +72,7 @@ Then set your domain in `.env` and restart:
 RP_ID=gym.example.com
 ORIGIN=https://gym.example.com
 WEB_PORT=8080
-RP_NAME=openGym
+RP_NAME=Ferrum
 ```
 
 ```bash
@@ -97,8 +97,8 @@ ADMIN_UIDS=youruserid      # comma-separated; these users get the admin dashboar
 INVITE_ONLY=1              # new profiles need an invite code
 ```
 
-Register your own passkey profile first, then find your id in `./data/db.json` under `users[].id`
-and put it in `ADMIN_UIDS`. You'll get an **Admin dashboard** link in Settings: who's training
+Register your own passkey profile first, then find your id (see Admin dashboard once listed, or
+inspect `./data/ferrum.sqlite`) and put it in `ADMIN_UIDS`. You'll get an **Admin dashboard** link in Settings: who's training
 right now, each user's workout history and body weight, the ability to disable an account (signed
 out and locked out everywhere until you re-enable it), and — with `INVITE_ONLY=1` — generating and
 revoking invite codes. Existing accounts keep working when you switch invite-only on. Admin access
@@ -184,7 +184,7 @@ server; that cache is equivalent to a password and must not be exposed to users 
 3. Hit **Test the Coach**. Green means a real round-trip to the selected provider worked.
 
 The card then shows the runtime, credential state, jobs run today and the last failure, if any.
-For the complete no-API-key Codex flow, see [ChatGPT-setup-instructions.md](../ChatGPT-setup-instructions.md).
+Provider setup details: [docs/internal/COACH_SETUP.md](internal/COACH_SETUP.md).
 
 ### Limits
 

@@ -54,6 +54,12 @@ test('no consent, no job — the gate is on the server, not the screen', () => {
   assert.throws(() => jobs.enqueue(uid, { kind: 'review' }), e => e.code === 'consent');
 });
 
+test('stale consent version is rejected like no consent', () => {
+  const uid = 'u-oldconsent';
+  writeState(DIR, uid, sampleState({ coach: { consent: { agreedAt: '2026-01-01T00:00:00Z', version: 0 } } }));
+  assert.throws(() => jobs.enqueue(uid, { kind: 'review' }), e => e.code === 'consent');
+});
+
 test('one job per profile at a time', async () => {
   const uid = 'u-single';
   writeState(DIR, uid, sampleState());

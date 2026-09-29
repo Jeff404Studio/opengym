@@ -52,8 +52,9 @@ provider dies, the engine carries on offline without skipping a beat.
 
 | Provider | Runtime | How you sign in | Guide |
 | --- | --- | --- | --- |
-| **Claude Code** | Claude Agent SDK | `claude setup-token` on a trusted machine, pasted into the admin card | [Claude setup guide](../Claude-setup-instructions.md) |
-| **OpenAI Codex** | Codex CLI (pinned, bundled) | ChatGPT device-code sign-in from the admin card | [ChatGPT / Codex setup guide](../ChatGPT-setup-instructions.md) |
+| **Claude Code** | Claude Agent SDK | `claude setup-token` on a trusted machine, pasted into the admin card | [Coach setup](internal/COACH_SETUP.md) |
+| **OpenAI Codex** | Codex CLI (pinned, bundled) | ChatGPT device-code sign-in from the admin card | [Coach setup](internal/COACH_SETUP.md) |
+| **Ollama** | local / tunneled HTTP | `OLLAMA_BASE_URL` (+ optional model) in env, then pick Ollama in Admin | [Coach setup](internal/COACH_SETUP.md) |
 | **Fixture** | in-repo fake | nothing — no AI account at all | walks the whole loop for demos and CI |
 
 Both runtimes are built into the `api` image, so a self-hoster installs nothing. Neither path
@@ -79,7 +80,7 @@ credentials.
 3. The card shows runtime version, sign-in state, jobs run today and the last failure. It never
    shows anyone's intake answers, payloads or proposals.
 
-Full walkthrough: [Claude](../Claude-setup-instructions.md) · [ChatGPT / Codex](../ChatGPT-setup-instructions.md) ·
+Full walkthrough: [Coach setup](internal/COACH_SETUP.md) ·
 [self-hosting §8](SELF_HOSTING.md#8-the-ai-coach-optional).
 
 `COACH_DISABLED=1` is the kill switch: the Coach reports as disabled everywhere regardless of
@@ -167,13 +168,6 @@ frontend/src/views/AdminCoach.jsx  provider, sign-in, caps, health
 
 ## Design documents
 
-- **[openGym_AI_Strategy.pdf](../openGym_AI_Strategy.pdf)** — the functional description and
-  design rationale for the feature (Implementation Plan v1.3.0), as a slide deck: the problem,
-  the Coach/Engine boundary, persona boundaries, both user journeys, the trust model and the
-  delivery phasing. Read this first for the *why*; read this file for what shipped.
-- **[ai-enablement/functional-plan.md](../ai-enablement/functional-plan.md)** — numbered
-  functional requirements (the `FR-xx` ids referenced throughout the code).
-- **[ai-enablement/implementation-plan.md](../ai-enablement/implementation-plan.md)** — the build
-  plan.
-- **[ai-enablement/implementation-report.md](../ai-enablement/implementation-report.md)** — what
-  was actually built, and where it diverged.
+The shipping design lives in this file and in [docs/internal/COACH_SETUP.md](internal/COACH_SETUP.md).
+Earlier strategy decks and `ai-enablement/` planning notes were removed from the tree; treat this
+document as the source of truth for what actually shipped.

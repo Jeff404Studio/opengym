@@ -10,6 +10,7 @@ import * as jobs from './jobs.js';
 import * as chat from './chat.js';
 import { adapterFor } from './adapters/index.js';
 import { DATA_CATEGORIES } from './payload.js';
+import { CONSENT_VERSION } from './consent.js';
 
 // Job failures the user sees, in the app's own voice. The raw provider detail never reaches
 // them — it goes to the admin card, which is where someone can act on it (FR-47).
@@ -49,7 +50,7 @@ export function coachRoutes({ json, readBody, readSession, requireAdmin }) {
         provider: cfg.provider,
         providerLabel: cfgStore.providerMeta(cfg).label,
         categories: DATA_CATEGORIES,
-        version: 1
+        version: CONSENT_VERSION
       });
     },
 

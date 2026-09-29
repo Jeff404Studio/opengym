@@ -21,16 +21,34 @@ let demoMod = null
 const demo = async () => (demoMod = demoMod || await import('./coach-demo.js'))
 const S = () => useStore.getState().S
 
+/** Flush pending local edits before any Coach call that reads server-side state (consent, plan). */
+const ensureSynced = async () => {
+  if (DEMO) return
+  await useStore.getState().pushState()
+}
+
 export const coachStatus = async () => DEMO ? (await demo()).demoStatus() : api('/api/coach/status')
-export const requestReview = async note => DEMO ? (await demo()).demoReview(S()) : api('/api/coach/review', { method: 'POST', body: JSON.stringify({ note: note || '' }) })
-export const requestPlan = async intake => DEMO ? (await demo()).demoPlan(S(), intake) : api('/api/coach/plan', { method: 'POST', body: JSON.stringify({ intake }) })
-export const refinePlan = async text => DEMO ? (await demo()).demoRefine(S()) : api('/api/coach/plan', { method: 'POST', body: JSON.stringify({ refine: text }) })
+export const requestReview = async note => {
+  await ensureSynced()
+  return DEMO ? (await demo()).demoReview(S()) : api('/api/coach/review', { method: 'POST', body: JSON.stringify({ note: note || '' }) })
+}
+export const requestPlan = async intake => {
+  await ensureSynced()
+  return DEMO ? (await demo()).demoPlan(S(), intake) : api('/api/coach/plan', { method: 'POST', body: JSON.stringify({ intake }) })
+}
+export const refinePlan = async text => {
+  await ensureSynced()
+  return DEMO ? (await demo()).demoRefine(S()) : api('/api/coach/plan', { method: 'POST', body: JSON.stringify({ refine: text }) })
+}
 export const resolvePending = async body => DEMO ? (await demo()).demoResolve() : api('/api/coach/pending/resolve', { method: 'POST', body: JSON.stringify(body) })
 export const forgetCoach = async () => DEMO ? (await demo()).demoResolve() : api('/api/coach/forget', { method: 'POST', body: '{}' })
 export const disclosure = async () => DEMO ? (await demo()).demoDisclosure() : api('/api/coach/disclosure')
-export const askCoachChat = async (message, history) => DEMO
-  ? { reply: 'Demo Coach: ask me anything about your plan once you self-host.', escalate_to_review: false }
-  : api('/api/coach/chat', { method: 'POST', body: JSON.stringify({ message, history }) })
+export const askCoachChat = async (message, history) => {
+  await ensureSynced()
+  return DEMO
+    ? { reply: 'Demo Coach: ask me anything about your plan once you self-host.', escalate_to_review: false }
+    : api('/api/coach/chat', { method: 'POST', body: JSON.stringify({ message, history }) })
+}
 
 /**
  * Live job/proposal state.

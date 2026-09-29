@@ -9,6 +9,3 @@ contact_links:
   - name: Show your setup
     url: https://github.com/DuarteSantos8/openGym/discussions/categories/show-and-tell
     about: Running openGym somewhere interesting, or built something on top of it? Show it off.
-  - name: Contributing guide
-    url: https://github.com/DuarteSantos8/openGym/blob/main/CONTRIBUTING.md
-    about: Project layout, dev setup and guidelines before you open a PR.

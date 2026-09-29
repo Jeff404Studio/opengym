@@ -11,6 +11,7 @@
  */
 import * as jobs from './jobs.js';
 import * as cfgStore from './config.js';
+import { hasConsent } from './consent.js';
 
 const TICK_MS = 60000;
 
@@ -49,7 +50,7 @@ export function startCadence(deps) {
       try {
         const S = jobs.readState(user.id);
         const coach = S?.coach;
-        if (!coach?.consent?.agreedAt) continue;         // consent revoked ⇒ cadence stops
+        if (!hasConsent(S)) continue;                    // revoked or outdated version ⇒ stop
         const tz = coach.cadence?.weekly ? (S.reminder?.tz || 'UTC') : null;
         const now = tz ? deps.userNow(tz) : null;
         if (!isDue(coach, S, now)) continue;
