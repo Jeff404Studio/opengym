@@ -68,14 +68,17 @@ export default {
     }
   },
 
-  async invoke({ prompt, env, model, timeoutMs }) {
+  async invoke({ prompt, env, model, timeoutMs, numPredict }) {
     const base = baseUrl(env);
     if (!base) {
       return { code: -1, text: '', stderr: 'OLLAMA_BASE_URL is not set', timedOut: false, spawnError: true };
     }
     const name = modelName(env, model);
+    const predict = Number.isFinite(numPredict) && numPredict > 0 ? Math.floor(numPredict) : 1024;
     try {
       // Native chat API — keep format json so Coach validation gets structured output.
+      // think:false is required for Qwen3: default "thinking" burns the whole chat budget
+      // on chain-of-thought and then nginx / CHAT_TIMEOUT return 504 before a reply.
       const r = await fetchJson(`${base}/api/chat`, {
         method: 'POST',
         timeoutMs: timeoutMs || 180000,
@@ -83,7 +86,8 @@ export default {
           model: name,
           stream: false,
           format: 'json',
-          options: { temperature: 0.2 },
+          think: false,
+          options: { temperature: 0.2, num_predict: predict },
           messages: [
             { role: 'system', content: SYSTEM },
             { role: 'user', content: prompt }

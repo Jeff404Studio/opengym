@@ -14,10 +14,12 @@ import { extractJSON } from './validate.js';
 import { CoachError, readState, capState, bumpDaily } from './jobs.js';
 
 const PROMPTS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'prompts');
-const CHAT_TIMEOUT_MS = 90_000;
+// Keep below nginx proxy_read_timeout (180s) so the API can return a typed timeout, not a bare 504.
+const CHAT_TIMEOUT_MS = 120_000;
 const MSG_MAX = 800;
-const HISTORY_MAX = 12;
+const HISTORY_MAX = 8;
 const REPLY_MAX = 2000;
+const CHAT_NUM_PREDICT = 400;
 
 function promptPart(name) {
   return fs.readFileSync(path.join(PROMPTS, name), 'utf8');
@@ -30,14 +32,12 @@ function instanceUsedToday() {
 
 /** Slim, allowlisted context — never full state, never identity. */
 export function buildChatContext(S) {
-  const routines = (S?.routines || []).slice(0, 7).map(r => ({
+  const routines = (S?.routines || []).slice(0, 5).map(r => ({
     name: r.name || '',
-    ex: (r.ex || []).slice(0, 12).map(e => ({
+    ex: (r.ex || []).slice(0, 8).map(e => ({
       id: e.id,
       sets: e.sets || 0,
-      reps: e.reps || null,
-      weight: e.weight || null,
-      prog: e.prog || null
+      reps: e.reps || null
     }))
   }));
   const week = {};
@@ -47,7 +47,7 @@ export function buildChatContext(S) {
       week[d] = r?.name || S.week[d];
     }
   }
-  const workouts = (S?.workouts || []).slice(-8).map(w => ({
+  const workouts = (S?.workouts || []).slice(-5).map(w => ({
     d: w.d,
     name: w.name || '',
     nSets: (w.entries || []).reduce((n, e) => n + (e.sets || []).filter(s => s.done !== false).length, 0)
@@ -61,10 +61,10 @@ export function buildChatContext(S) {
   } : null;
   const libraryIds = [...new Set(
     (S?.routines || []).flatMap(r => (r.ex || []).map(e => e.id)).filter(Boolean)
-  )].slice(0, 80);
+  )].slice(0, 40);
 
   return {
-    meta: { lang: S?.lang || 'en', unit: S?.unit || 'kg', effortScale: S?.effort || S?.showRir ? 'rir' : null },
+    meta: { lang: S?.lang || 'fr', unit: S?.unit || 'kg', effortScale: S?.effort || S?.showRir ? 'rir' : null },
     plan: { routines, week },
     recentWorkouts: workouts,
     profile,
@@ -73,8 +73,9 @@ export function buildChatContext(S) {
 }
 
 function buildPrompt(payload) {
-  return promptPart('common.md') + '\n\n---\n\n' + promptPart('chat.md') +
-    '\n\n---\n\n## Payload\n\n```json\n' + JSON.stringify(payload, null, 1) + '\n```\n';
+  // Chat-only prompt: skip common.md (plan-design rules) — too large/slow for small local models.
+  return promptPart('chat.md') +
+    '\n\n---\n\n## Payload\n\n```json\n' + JSON.stringify(payload) + '\n```\n';
 }
 
 function sanitizeHistory(history) {
@@ -124,7 +125,9 @@ export async function ask(uid, { message, history } = {}) {
     if (ids) fs.chownSync(jobDir, ids.uid, ids.gid);
 
     const r = await adapter.invoke({
-      cfg, prompt, jobDir, env, model: cfg.model || null, timeoutMs: CHAT_TIMEOUT_MS
+      cfg, prompt, jobDir, env, model: cfg.model || null,
+      timeoutMs: CHAT_TIMEOUT_MS,
+      numPredict: CHAT_NUM_PREDICT
     });
 
     if (r.timedOut) {
